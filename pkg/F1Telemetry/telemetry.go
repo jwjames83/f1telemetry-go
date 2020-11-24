@@ -3,6 +3,7 @@ package F1Telemetry
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"net"
 
 	"github.com/jwjames83/f1telemetry-go/internal/pkg/f1packet"
@@ -25,6 +26,15 @@ func New() *Receiver {
 	return rv
 }
 
+func memsetRepeat(a []byte, v byte) {
+	if len(a) == 0 {
+		return
+	}
+	a[0] = v
+	for bp := 1; bp < len(a); bp *= 2 {
+		copy(a[bp:], a[:bp])
+	}
+}
 /** Flow --
 initialize packets and memory
 
@@ -48,7 +58,7 @@ func (r *Receiver) Start(port int) {
 	var lapData f1packet.LapData
 	var motion f1packet.Motion
 	var session f1packet.Session
-	// var event f1packet.Event
+	var event f1packet.Event
 	var setups f1packet.CarSetups
 	var carStatus f1packet.CarStatus
 	var results f1packet.Results
@@ -60,6 +70,7 @@ func (r *Receiver) Start(port int) {
 	for {
 		// Reset the reader
 		_, err = reader.Seek(0, 0)
+		memsetRepeat (buffer, 0)
 		check(err)
 
 		// Read
@@ -106,8 +117,60 @@ func (r *Receiver) Start(port int) {
 			check(binary.Read(reader, binary.LittleEndian, &participants))
 
 		// TODO: Properly parse the event info
-		// case f1packet.IdEvent:
-		// 	check(binary.Read(bytes.NewReader(buffer), binary.LittleEndian, &event))
+		case f1packet.IdEvent:
+			readIt := false
+			check(binary.Read(reader, binary.LittleEndian, &event.StringCode))
+
+			switch string(buffer[f1packet.HeaderSize + 1:f1packet.HeaderSize + 1 + f1packet.EventStringCodeLen]) {
+			case f1packet.EventStrSessionStarted:
+				frame = header.FrameIdentifier
+				fmt.Println("Session started")
+			case f1packet.EventStrSessionEnded:
+				fmt.Println("Session ended")
+			case f1packet.EventStrDRSenabled:
+				fmt.Println("DRS enabled")
+			case f1packet.EventStrDRSdisabled:
+				fmt.Println("DRS disabled")
+			case f1packet.EventStrChequered:
+				fmt.Println("Checkered flag")
+
+			case f1packet.EventStrFastestLap:
+				event.Details = new(f1packet.FastestLap)
+				readIt = true
+			case f1packet.EventStrRetirement:
+				event.Details = new(f1packet.Retirement)
+				readIt = true
+			case f1packet.EventStrTeamMateInPit:
+				event.Details = new(f1packet.TeamMateInPits)
+				readIt = true
+			case f1packet.EventStrRaceWinner:
+				event.Details = new(f1packet.RaceWinner)
+				readIt = true
+			case f1packet.EventStrPenaltyIssued:
+				event.Details = new(f1packet.Penalty)
+				readIt = true
+			case f1packet.EventStrSpeedTrap:
+				event.Details = new(f1packet.SpeedTrap)
+				readIt = true
+			}
+
+			if readIt {
+				check(binary.Read(reader, binary.LittleEndian, event.Details))
+				switch d := event.Details.(type) {
+				case *f1packet.SpeedTrap:
+					name := string(participants.PlayerInfo[d.VehicleIdx].Name[:])
+					fmt.Printf("SpeedTrap: %s, %f\n", name, d.Speed)
+				case *f1packet.FastestLap:
+					name := string(participants.PlayerInfo[d.VehicleIdx].Name[:])
+					fmt.Printf("FastestLap: %s %f\n", name, d.LapTime)
+				case *f1packet.RaceWinner:
+					name := string(participants.PlayerInfo[d.VehicleIdx].Name[:])
+					fmt.Printf("RaceWinner: %s\n", name)
+				case *f1packet.Penalty:
+					name := string(participants.PlayerInfo[d.VehicleIdx].Name[:])
+					fmt.Printf("Penalty: %s lap[%d]\n", name, d.LapNum)
+				}
+			}
 
 		case f1packet.IdCarSetups:
 			check(binary.Read(reader, binary.LittleEndian, &setups))

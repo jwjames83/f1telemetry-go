@@ -10,18 +10,7 @@ Version: 1
 */
 
 const EventPacketSize int = 35
-
-type EventDetails interface {
-	Visit(Visitor)
-}
-
-// The handlers for each event type are defined in instances of this struct
-type Visitor struct {
-	VisitFastestLap     func(lap FastestLap)
-	VisitRetirement     func(retirement Retirement)
-	VisitTeamMateInPits func(pits TeamMateInPits)
-	VisitSpeedTrap      func(trap SpeedTrap)
-}
+const EventStringCodeLen int = 4
 
 type FastestLap struct {
 	VehicleIdx uint8 // Vehicle index of car achieving fastest lap
@@ -56,21 +45,21 @@ type SpeedTrap struct {
 }
 
 type Event struct {
-	StringCode [4]byte       // Event string code, see below
-	Details    EventDetails // Event details - should be interpreted differently for each type
+	StringCode [4]byte     // Event string code, see below
+	Details    interface{} // Event details - should be interpreted differently for each type
 }
 
 const (
-	SessionStartedStr = "SSTA"
-	SessionEndedStr   = "SEND"       // Sent when the session ends
-	FastestLapStr     = "FTLP"       // When a driver achieves the fastest lap
-	RetirementStr     = "RTMT"       // When a driver retires
-	DRSenabledStr     = "DRSE"       // Race control have enabled DRS
-	DRSdisabledStr    = "DRSD"       // Race control have disabled DRS
-	TeamMateInPitStr  = "TMPT"       // Your team mate has entered the pits
-	ChequeredStr      = "CHQF"       // The chequered flag has been waved
-	CheckeredStr      = ChequeredStr // Alternative spelling of chequred
-	RaceWinnerStr     = "RCWN"       // The race winner is announced
-	PenaltyIssuedStr  = "PENA"       // A penalty has been issued – details in event
-	SpeedTrapTrStr    = "SPTP"       // Speed trap has been triggered by fastest speed
+	EventStrSessionStarted = "SSTA"
+	EventStrSessionEnded   = "SEND"            // Sent when the session ends
+	EventStrFastestLap     = "FTLP"            // When a driver achieves the fastest lap
+	EventStrRetirement     = "RTMT"            // When a driver retires
+	EventStrDRSenabled     = "DRSE"            // Race control have enabled DRS
+	EventStrDRSdisabled    = "DRSD"            // Race control have disabled DRS
+	EventStrTeamMateInPit  = "TMPT"            // Your team mate has entered the pits
+	EventStrChequered      = "CHQF"            // The chequered flag has been waved
+	EventStrCheckered      = EventStrChequered // Alternative spelling of chequred
+	EventStrRaceWinner     = "RCWN"            // The race winner is announced
+	EventStrPenaltyIssued  = "PENA"            // A penalty has been issued – details in event
+	EventStrSpeedTrap      = "SPTP"            // Speed trap has been triggered by fastest speed
 )
