@@ -3,4 +3,6 @@ syntax = "proto3";
 message Telemetry {
   int32 gear = 1;
   int32 speed = 2;
+
+
 }

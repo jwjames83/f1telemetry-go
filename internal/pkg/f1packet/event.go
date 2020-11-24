@@ -56,7 +56,7 @@ type SpeedTrap struct {
 }
 
 type Event struct {
-	StringCode string       // Event string code, see below
+	StringCode [4]byte       // Event string code, see below
 	Details    EventDetails // Event details - should be interpreted differently for each type
 }
 

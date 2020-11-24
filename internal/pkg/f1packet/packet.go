@@ -19,6 +19,9 @@ type PacketInterface interface {
 
 func GetSize(id uint8) int {
 	switch id {
+	case IdMotion:
+		return MotionPacketSize
+
 	case IdEvent:
 		return EventPacketSize
 
